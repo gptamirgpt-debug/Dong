@@ -1,0 +1,244 @@
+name: Build Dong APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Generate Android project
+        run: |
+          set -e
+          test -f dong.html
+          P=android
+          mkdir -p $P/app/src/main/java/com/amir/dong $P/app/src/main/assets/fonts $P/app/src/main/res/values $P/app/src/main/res/drawable $P/app/src/main/res/mipmap-anydpi-v26
+
+          cat > $P/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "Dong"
+          include ':app'
+          EOF
+
+          cat > $P/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.5.2' apply false
+          }
+          EOF
+
+          cat > $P/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g
+          android.useAndroidX=true
+          EOF
+
+          cat > $P/app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.amir.dong'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId 'com.amir.dong'
+                  minSdk 26
+                  targetSdk 34
+                  versionCode Integer.parseInt(System.getenv('RUN_NUMBER') ?: '1')
+                  versionName '1.0'
+              }
+
+              signingConfigs {
+                  dong {
+                      storeFile file('dong.keystore')
+                      storePassword 'dongpass123'
+                      keyAlias 'dong'
+                      keyPassword 'dongpass123'
+                  }
+              }
+
+              buildTypes {
+                  debug {
+                      signingConfig signingConfigs.dong
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          EOF
+
+          echo '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' | base64 -d > $P/app/dong.keystore
+
+          cat > $P/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="@string/app_name"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher"
+                  android:supportsRtl="true"
+                  android:allowBackup="true"
+                  android:theme="@style/AppTheme">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > $P/app/src/main/java/com/amir/dong/MainActivity.java <<'EOF'
+          package com.amir.dong;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WebView web = new WebView(this);
+                  setContentView(web);
+                  WebSettings s = web.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setAllowContentAccess(false);
+                  web.setWebViewClient(new WebViewClient());
+                  web.loadUrl("file:///android_asset/index.html");
+              }
+          }
+          EOF
+
+          cat > $P/app/src/main/res/values/strings.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">دنگ</string>
+          </resources>
+          EOF
+
+          cat > $P/app/src/main/res/values/colors.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="icon_bg">#0B7A75</color>
+          </resources>
+          EOF
+
+          cat > $P/app/src/main/res/values/themes.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+                  <item name="android:statusBarColor">#0B7A75</item>
+                  <item name="android:navigationBarColor">#0B7A75</item>
+                  <item name="android:windowBackground">#0B7A75</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > $P/app/src/main/res/drawable/ic_fg.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path android:fillColor="#FFFFFF" android:pathData="M54,54 L54,28 A26,26 0 1 0 80,54 Z" />
+              <path android:fillColor="#9FE0DA" android:pathData="M58,50 L58,24 A26,26 0 0 1 84,50 Z" />
+          </vector>
+          EOF
+
+          cat > $P/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/icon_bg" />
+              <foreground android:drawable="@drawable/ic_fg" />
+          </adaptive-icon>
+          EOF
+
+      - name: Bundle the web app with offline fonts
+        run: |
+          python3 - <<'PY'
+          import re, urllib.request
+
+          ua = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+          assets = 'android/app/src/main/assets/'
+
+          def get(url):
+              return urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': ua}), timeout=60).read()
+
+          css = get('https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;500;700&display=swap').decode('utf-8')
+          files = {}
+
+          def rep(m):
+              u = m.group(1)
+              if u not in files:
+                  fn = 'f%d.woff2' % (len(files) + 1)
+                  open(assets + 'fonts/' + fn, 'wb').write(get(u))
+                  files[u] = fn
+              return 'url(fonts/%s)' % files[u]
+
+          css = re.sub(r'url\((https://[^)]+)\)', rep, css)
+          assert files, 'no fonts downloaded'
+          open(assets + 'fonts.css', 'w', encoding='utf-8').write(css)
+
+          h = open('dong.html', encoding='utf-8').read()
+          h, n = re.subn(r'<link[^>]*fonts\.googleapis\.com[^>]*>', '<link rel="stylesheet" href="fonts.css">', h)
+          assert n == 1, 'font link not found in dong.html'
+          head = ('<!doctype html>\n<html lang="fa" dir="rtl">\n<head>\n<meta charset="utf-8">\n'
+                  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+                  '<style>html{color-scheme:light}body{margin:0}</style>\n')
+          open(assets + 'index.html', 'w', encoding='utf-8').write(head + h + '\n</html>\n')
+          print('fonts:', len(files))
+          PY
+
+      - name: Build APK
+        working-directory: android
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Keep APK as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dong-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish release with APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk Dong.apk
+          gh release create "apk-${{ github.run_number }}" Dong.apk --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Dong ${{ github.run_number }}" --notes "Dong APK" --latest
