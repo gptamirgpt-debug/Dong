@@ -1,0 +1,589 @@
+<title>دنگ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow column like a receipt. Families, then one card per purchase (with rows), then the final settle-up list with ticks. */
+:root {
+  --bg: #eef3f2;
+  --surface: #ffffff;
+  --ink: #11302f;
+  --muted: #5f7776;
+  --line: #d5e1df;
+  --accent: #0b7a75;
+  --accent-ink: #ffffff;
+  --accent-soft: #dff0ee;
+  --owe: #c9482c;
+  --owe-soft: #fbe6e0;
+  --font-display: "Lalezar", "Vazirmatn", Tahoma, sans-serif;
+  --font-body: "Vazirmatn", Tahoma, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1a1a;
+    --surface: #132726;
+    --ink: #e6f2f0;
+    --muted: #8faaa8;
+    --line: #24403f;
+    --accent: #3cc4b9;
+    --accent-ink: #062423;
+    --accent-soft: #17403e;
+    --owe: #f08a6e;
+    --owe-soft: #3a2420;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1a1a;
+  --surface: #132726;
+  --ink: #e6f2f0;
+  --muted: #8faaa8;
+  --line: #24403f;
+  --accent: #3cc4b9;
+  --accent-ink: #062423;
+  --accent-soft: #17403e;
+  --owe: #f08a6e;
+  --owe-soft: #3a2420;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  direction: rtl;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header h1 { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1.1; margin: 0; color: var(--accent); }
+header p { margin: 4px 0 0; color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card h2 { font-family: var(--font-display); font-weight: 400; font-size: 22px; margin: 0; line-height: 1.3; }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.head .meta { color: var(--muted); font-size: 13px; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+.note { background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; font-size: 13px; }
+input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; width: 100%; min-width: 0; }
+select { appearance: none; -webkit-appearance: none; padding-left: 34px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: 18px 52%, 12px 52%; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
+input::placeholder { color: var(--muted); opacity: .8; }
+input:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; cursor: pointer; }
+.num { font-variant-numeric: tabular-nums; text-align: right; }
+.x { width: 36px; height: 36px; flex: none; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 20px; line-height: 1; padding: 0; }
+.x:hover { color: var(--owe); border-color: var(--owe); }
+.add { align-self: flex-start; background: transparent; color: var(--accent); border: 1.5px dashed var(--accent); border-radius: 12px; padding: 7px 16px; font-weight: 500; }
+.add:hover { background: var(--accent-soft); }
+.add.big { align-self: stretch; padding: 12px 16px; }
+
+/* families */
+#fams { display: flex; flex-direction: column; gap: 10px; }
+.frow { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem 36px; gap: 8px; align-items: center; }
+.sz { position: relative; display: block; min-width: 0; }
+.sz input { padding-left: 44px; }
+.sz span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); pointer-events: none; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--bg); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.stat small { display: block; color: var(--muted); font-size: 12px; }
+.stat b { font-size: 16px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* purchase cards */
+#cards { display: flex; flex-direction: column; gap: 16px; }
+.xcard { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; min-width: 0; }
+.xhead { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 11rem) 36px; gap: 8px; align-items: end; padding: 16px 16px 12px; border-bottom: 1px solid var(--line); }
+.xhead label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; color: var(--muted); }
+.xhead .title { font-family: var(--font-display); font-size: 20px; padding-block: 6px; }
+.xbody { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+.xrow { background: var(--bg); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.r1 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 12.5rem) 36px; gap: 8px; align-items: center; }
+.r2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.amt { position: relative; display: block; min-width: 0; }
+.amt input { padding-left: 52px; }
+.amt span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); pointer-events: none; }
+.picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick { border-radius: 999px; padding: 4px 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); font-size: 14px; text-decoration: line-through; text-decoration-thickness: 1px; }
+.pick[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); text-decoration: none; font-weight: 500; }
+.vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 8px; }
+.vals label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.rmeta { font-size: 13px; color: var(--muted); }
+.rmeta:empty { display: none; }
+.rmeta.warn { color: var(--owe); }
+.xfoot { padding: 12px 16px 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.xfoot .sum { font-size: 13.5px; }
+.xfoot .sum.warn { color: var(--owe); }
+.xfoot .sum b { font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border-radius: 999px; padding: 3px 12px; font-size: 13px; background: var(--accent-soft); color: var(--ink); }
+.chip.neg { background: var(--owe-soft); }
+.chip.zero { background: var(--bg); color: var(--muted); }
+.chip em { font-style: normal; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* settle list */
+#list { display: flex; flex-direction: column; gap: 10px; }
+.item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); transition: background .2s, border-color .2s; }
+.item.done { background: var(--accent-soft); border-color: transparent; }
+.tick { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--muted); background: var(--surface); color: transparent; display: grid; place-items: center; padding: 0; font-size: 18px; line-height: 1; transition: all .15s; }
+.tick[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.who { min-width: 0; }
+.who .line1 { overflow-wrap: anywhere; }
+.item.done .line1 { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.who .date { font-size: 12.5px; color: var(--accent); font-weight: 500; }
+.who .date:empty { display: none; }
+.money { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.money small { font-weight: 400; color: var(--muted); font-size: 12px; margin-right: 3px; }
+.item.done .money { color: var(--muted); }
+.progress { height: 6px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.empty { text-align: center; color: var(--muted); padding: 10px 0; }
+.allgood { text-align: center; font-weight: 700; color: var(--accent); }
+.reset { align-self: center; background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 12px; padding: 8px 18px; }
+.reset:hover, .reset.arm { color: var(--owe); border-color: var(--owe); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 460px) {
+  .xhead { grid-template-columns: minmax(0, 1fr) 36px; }
+  .xhead .payer { grid-column: 1 / -1; grid-row: 2; }
+  .r1 { grid-template-columns: minmax(0, 1fr) 36px; }
+  .r1 select { grid-column: 1 / -1; grid-row: 2; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat:last-child { grid-column: 1 / -1; }
+}
+</style>
+
+<div class="wrap" dir="rtl" lang="fa">
+  <header>
+    <h1>دنگ</h1>
+    <p>خانواده‌ها را یک بار بنویس، بعد هر خرج را جدا ثبت کن. آخر کار معلوم می‌شود کی به کی چقدر بدهد.</p>
+  </header>
+
+  <section class="card" aria-labelledby="t-fam">
+    <div class="head"><h2 id="t-fam">خانواده‌ها</h2><span class="meta">تعداد اعضا فقط در تقسیم «بر اساس نفرات» حساب می‌شود</span></div>
+    <div class="note" id="sample" hidden>این‌ها اطلاعات نمونه‌اند. اسم و مبلغ را عوض کن یا «حساب جدید» را بزن.</div>
+    <div id="fams"></div>
+    <button class="add" id="addFam" type="button">+ خانواده‌ی جدید</button>
+    <div class="stats">
+      <div class="stat"><small>خانواده</small><b id="sFam">۰</b></div>
+      <div class="stat"><small>نفرات</small><b id="sPeople">۰</b></div>
+      <div class="stat"><small>جمع همه‌ی خرج‌ها</small><b id="sTotal">۰</b></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-exp" style="display:flex;flex-direction:column;gap:12px">
+    <div class="head"><h2 id="t-exp" style="font-family:var(--font-display);font-weight:400;font-size:22px;margin:0">خرج‌ها</h2><span class="meta">هر خرید یک کارت، هر کارت چند ردیف</span></div>
+    <div id="cards"></div>
+    <button class="add big" id="addCard" type="button">+ خرج جدید</button>
+  </section>
+
+  <section class="card" aria-labelledby="t-settle">
+    <div class="head"><h2 id="t-settle">تسویه حساب</h2><span class="meta" id="prog"></span></div>
+    <div class="chips" id="bals" aria-label="تراز هر خانواده"></div>
+    <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+    <div id="list"></div>
+    <div class="allgood" id="allgood" hidden>همه‌ی حساب‌ها صاف شد.</div>
+  </section>
+
+  <button class="reset" id="reset" type="button">حساب جدید</button>
+</div>
+
+<script>
+(function () {
+  var KEY = "dong-v2";
+  var nf = new Intl.NumberFormat("fa-IR");
+  var fmt = function (n) { return nf.format(n); };
+  var dDate = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "long", year: "numeric" });
+  var dTime = new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" });
+  var fmtDate = function (iso) { var d = new Date(iso); return dDate.format(d) + "، ساعت " + dTime.format(d); };
+
+  var uid = 0;
+  function newId() { uid += 1; return "i" + Date.now().toString(36) + uid; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function $(id) { return document.getElementById(id); }
+  function toInt(s) {
+    var t = String(s).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; })
+                     .replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; })
+                     .replace(/\D/g, "");
+    return t ? parseInt(t, 10) : 0;
+  }
+
+  var MODES = [
+    ["heads", "بر اساس نفرات"],
+    ["equal", "مساوی بین خانواده‌ها"],
+    ["weight", "به نسبت مقدار"],
+    ["each", "مبلغ جداگانه"]
+  ];
+  var MODE_HINT = {
+    heads: "هر خانواده به نسبت تعداد اعضایش سهم می‌دهد. خانواده‌ای که در این خرید نبوده را خاموش کن.",
+    equal: "هر خانواده‌ی انتخاب‌شده سهم برابر دارد، چه چند نفر باشند چه یک نفر.",
+    weight: "سهم‌ها به نسبت مقداری است که برای هر خانواده می‌نویسی، مثلاً گرم.",
+    each: "برای هر خانواده مبلغ سفارش خودش را بنویس. اگر قیمت واحد را پر کنی، فقط تعداد را وارد کن."
+  };
+
+  function newRow(mode) { return { id: newId(), label: "", mode: mode || "heads", amount: 0, unit: 0, off: {}, val: {} }; }
+  function newCard(payer) { return { id: newId(), title: "", payer: payer || "", rows: [newRow()] }; }
+
+  function sampleState() {
+    var a = { id: newId(), name: "امیر", size: 2 };
+    var z = { id: newId(), name: "زهرا", size: 3 };
+    var b = { id: newId(), name: "بشیر", size: 1 };
+
+    var pist = newCard(a.id); pist.title = "پسته";
+    var pr = pist.rows[0]; pr.label = "پسته"; pr.mode = "weight"; pr.amount = 1200000;
+    pr.val[a.id] = 500; pr.val[z.id] = 500; pr.val[b.id] = 750;
+
+    var ice = newCard(z.id); ice.title = "بستنی";
+    ice.rows[0].label = "بستنی"; ice.rows[0].amount = 500000;
+
+    var cafe = newCard(b.id); cafe.title = "کافه";
+    var d = newRow("each"); d.label = "نوشیدنی‌ها";
+    d.val[a.id] = 240000; d.val[z.id] = 360000; d.val[b.id] = 120000;
+    var k = newRow("equal"); k.label = "دو کیک مشترک"; k.amount = 200000;
+    cafe.rows = [d, k];
+
+    return { sample: true, done: {}, fams: [a, z, b], cards: [pist, ice, cafe] };
+  }
+  function blankState() {
+    return { sample: false, done: {}, fams: [], cards: [] };
+  }
+
+  var state;
+  try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) { state = null; }
+  if (!state || !Array.isArray(state.fams) || !Array.isArray(state.cards)) state = blankState();
+  if (!state.done) state.done = {};
+  state.cards.forEach(function (c) { c.rows = c.rows || []; c.rows.forEach(function (r) { r.off = r.off || {}; r.val = r.val || {}; }); });
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function touch() { state.sample = false; }
+  function nm(f, i) { return (f.name || "").trim() || "خانواده " + fmt(i + 1); }
+  function famIndex(id) { for (var i = 0; i < state.fams.length; i++) if (state.fams[i].id === id) return i; return -1; }
+  function sum(a) { return a.reduce(function (s, x) { return s + x; }, 0); }
+
+  /* ---------- calculation ---------- */
+  // Splits an integer total by weights so the parts add up exactly.
+  function distribute(total, w) {
+    var s = sum(w);
+    if (!(s > 0)) return null;
+    var ex = w.map(function (x) { return total * x / s; });
+    var fl = ex.map(Math.floor);
+    var rem = total - sum(fl);
+    var order = ex.map(function (x, i) { return { i: i, f: x - fl[i] }; })
+                  .sort(function (p, q) { return q.f - p.f || p.i - q.i; });
+    for (var k = 0; k < rem; k++) fl[order[k].i]++;
+    return fl;
+  }
+
+  function rowShares(r) {
+    var F = state.fams;
+    var out = { ok: false, total: 0, shares: F.map(function () { return 0; }), msg: "" };
+    if (r.mode === "each") {
+      var sh = F.map(function (f) { var v = r.val[f.id] || 0; return r.unit > 0 ? v * r.unit : v; });
+      out.shares = sh; out.total = sum(sh); out.ok = out.total > 0;
+      return out;
+    }
+    var w = F.map(function (f) {
+      if (r.mode === "weight") return r.val[f.id] || 0;
+      if (r.off[f.id]) return 0;
+      return r.mode === "heads" ? Math.max(1, f.size || 1) : 1;
+    });
+    out.total = r.amount || 0;
+    if (out.total <= 0) return out;
+    var d = distribute(out.total, w);
+    if (!d) { out.msg = r.mode === "weight" ? "برای هیچ خانواده‌ای مقدار ننوشته‌ای." : "هیچ خانواده‌ای روشن نیست."; return out; }
+    out.shares = d; out.ok = true;
+    return out;
+  }
+
+  function compute() {
+    var F = state.fams;
+    var bal = F.map(function () { return 0; });
+    var grand = 0, cards = {};
+    state.cards.forEach(function (c) {
+      var info = { total: 0, owed: F.map(function () { return 0; }), rows: {}, pi: famIndex(c.payer) };
+      c.rows.forEach(function (r) {
+        var res = rowShares(r);
+        info.rows[r.id] = res;
+        if (res.ok) { info.total += res.total; res.shares.forEach(function (s, i) { info.owed[i] += s; }); }
+      });
+      if (info.pi >= 0 && info.total > 0) {
+        bal[info.pi] += info.total;
+        info.owed.forEach(function (s, i) { bal[i] -= s; });
+        grand += info.total;
+      }
+      cards[c.id] = info;
+    });
+    var cred = [], debt = [];
+    bal.forEach(function (b, i) {
+      if (b > 0) cred.push({ i: i, v: b }); else if (b < 0) debt.push({ i: i, v: -b });
+    });
+    cred.sort(function (p, q) { return q.v - p.v; });
+    debt.sort(function (p, q) { return q.v - p.v; });
+    var tx = [], a = 0, b2 = 0;
+    while (a < debt.length && b2 < cred.length) {
+      var m = Math.min(debt[a].v, cred[b2].v);
+      tx.push({ from: debt[a].i, to: cred[b2].i, amt: m });
+      debt[a].v -= m; cred[b2].v -= m;
+      if (debt[a].v === 0) a++;
+      if (cred[b2].v === 0) b2++;
+    }
+    return { bal: bal, grand: grand, cards: cards, tx: tx };
+  }
+
+  /* ---------- inputs ---------- */
+  function numField(val, ph, onVal, extraCls) {
+    var i = el("input", "num" + (extraCls ? " " + extraCls : ""));
+    i.type = "text"; i.inputMode = "numeric"; i.placeholder = ph; i.autocomplete = "off";
+    i.value = val ? fmt(val) : "";
+    i.addEventListener("input", function () {
+      touch();
+      var v = toInt(i.value);
+      i.value = v ? fmt(v) : "";
+      onVal(v); save(); renderResults();
+    });
+    return i;
+  }
+  function moneyBox(input) {
+    var w = el("label", "amt"); w.appendChild(input); w.appendChild(el("span", null, "تومان")); return w;
+  }
+
+  /* ---------- families ---------- */
+  function renderFams() {
+    var box = $("fams"); box.textContent = "";
+    if (!state.fams.length) box.appendChild(el("div", "empty", "هنوز خانواده‌ای اضافه نکرده‌ای. با دکمه‌ی زیر شروع کن."));
+    state.fams.forEach(function (f, i) {
+      var row = el("div", "frow");
+      var name = el("input"); name.id = "nm-" + f.id; name.type = "text"; name.placeholder = "اسم خانواده"; name.autocomplete = "off";
+      name.value = f.name; name.setAttribute("aria-label", "اسم خانواده " + fmt(i + 1));
+      name.addEventListener("input", function () { touch(); f.name = name.value; save(); renderCards(); renderResults(); });
+      var sz = el("label", "sz");
+      var si = numField(f.size, "۱", function (v) { f.size = v; renderCards(); }); si.setAttribute("aria-label", "تعداد اعضا");
+      sz.appendChild(si); sz.appendChild(el("span", null, "نفر"));
+      var x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "حذف " + nm(f, i));
+      x.addEventListener("click", function () {
+        touch();
+        state.fams = state.fams.filter(function (q) { return q !== f; });
+        state.cards.forEach(function (c) { if (c.payer === f.id) c.payer = ""; });
+        save(); renderFams(); renderCards(); renderResults();
+      });
+      row.appendChild(name); row.appendChild(sz); row.appendChild(x);
+      box.appendChild(row);
+    });
+  }
+
+  /* ---------- purchase cards ---------- */
+  function buildRow(c, r) {
+    var row = el("div", "xrow");
+
+    var r1 = el("div", "r1");
+    var lab = el("input"); lab.id = "lb-" + r.id; lab.type = "text"; lab.placeholder = "این ردیف چیست؟ مثلاً کیک"; lab.value = r.label; lab.autocomplete = "off";
+    lab.setAttribute("aria-label", "اسم ردیف");
+    lab.addEventListener("input", function () { touch(); r.label = lab.value; save(); });
+    var sel = el("select"); sel.id = "md-" + r.id; sel.setAttribute("aria-label", "نوع تقسیم");
+    MODES.forEach(function (m) { var o = el("option", null, m[1]); o.value = m[0]; if (m[0] === r.mode) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener("change", function () {
+      touch(); r.mode = sel.value; save(); renderCards(); renderResults();
+      var s2 = $("md-" + r.id); if (s2) s2.focus();
+    });
+    var del = el("button", "x", "×"); del.type = "button"; del.setAttribute("aria-label", "حذف ردیف");
+    del.addEventListener("click", function () {
+      touch(); c.rows = c.rows.filter(function (q) { return q !== r; }); save(); renderCards(); renderResults();
+    });
+    r1.appendChild(lab); r1.appendChild(sel); r1.appendChild(del);
+    row.appendChild(r1);
+
+    row.appendChild(el("p", "hint", MODE_HINT[r.mode]));
+
+    var r2 = el("div", "r2");
+    if (r.mode === "each") {
+      var unit = numField(r.unit, "قیمت واحد (اختیاری)، مثلاً قیمت یک ساندویچ", function (v) {
+        r.unit = v;
+        var ins = row.querySelectorAll(".vals input");
+        for (var k = 0; k < ins.length; k++) ins[k].placeholder = v > 0 ? "تعداد" : "مبلغ";
+      });
+      unit.setAttribute("aria-label", "قیمت واحد");
+      r2.appendChild(moneyBox(unit));
+    } else {
+      var amt = numField(r.amount, "مبلغ کل این ردیف", function (v) { r.amount = v; });
+      amt.setAttribute("aria-label", "مبلغ کل");
+      r2.appendChild(moneyBox(amt));
+    }
+    row.appendChild(r2);
+
+    if (r.mode === "heads" || r.mode === "equal") {
+      var picks = el("div", "picks");
+      state.fams.forEach(function (f, i) {
+        var b = el("button", "pick", nm(f, i) + (r.mode === "heads" ? " (" + fmt(Math.max(1, f.size || 1)) + ")" : ""));
+        b.type = "button"; b.setAttribute("aria-pressed", r.off[f.id] ? "false" : "true");
+        b.addEventListener("click", function () {
+          touch();
+          if (r.off[f.id]) delete r.off[f.id]; else r.off[f.id] = true;
+          b.setAttribute("aria-pressed", r.off[f.id] ? "false" : "true");
+          save(); renderResults();
+        });
+        picks.appendChild(b);
+      });
+      row.appendChild(picks);
+    } else {
+      var vals = el("div", "vals");
+      state.fams.forEach(function (f, i) {
+        var l = el("label"); l.appendChild(el("span", null, nm(f, i)));
+        var ph = r.mode === "weight" ? "مقدار" : (r.unit > 0 ? "تعداد" : "مبلغ");
+        var inp = numField(f.id in r.val ? r.val[f.id] : 0, ph, function (v) { r.val[f.id] = v; });
+        inp.setAttribute("aria-label", nm(f, i));
+        l.appendChild(inp); vals.appendChild(l);
+      });
+      row.appendChild(vals);
+    }
+
+    var meta = el("div", "rmeta"); meta.id = "rt-" + r.id;
+    row.appendChild(meta);
+    return row;
+  }
+
+  function buildCard(c) {
+    var box = el("div", "xcard");
+    var head = el("div", "xhead");
+    var tl = el("label"); tl.appendChild(el("span", null, "اسم خرج"));
+    var title = el("input", "title"); title.id = "t-" + c.id; title.type = "text"; title.placeholder = "مثلاً کافه"; title.value = c.title; title.autocomplete = "off";
+    title.addEventListener("input", function () { touch(); c.title = title.value; save(); });
+    tl.appendChild(title);
+    var pl = el("label", "payer"); pl.appendChild(el("span", null, "پولش را داد"));
+    var pay = el("select"); pay.id = "pay-" + c.id;
+    if (famIndex(c.payer) < 0) { var o0 = el("option", null, "انتخاب کن"); o0.value = ""; o0.selected = true; pay.appendChild(o0); }
+    state.fams.forEach(function (f, i) { var o = el("option", null, nm(f, i)); o.value = f.id; if (f.id === c.payer) o.selected = true; pay.appendChild(o); });
+    pay.addEventListener("change", function () { touch(); c.payer = pay.value; save(); renderResults(); });
+    pl.appendChild(pay);
+    var del = el("button", "x", "×"); del.type = "button"; del.setAttribute("aria-label", "حذف این خرج");
+    del.addEventListener("click", function () {
+      touch(); state.cards = state.cards.filter(function (q) { return q !== c; }); save(); renderCards(); renderResults();
+    });
+    head.appendChild(tl); head.appendChild(pl); head.appendChild(del);
+    box.appendChild(head);
+
+    var body = el("div", "xbody");
+    c.rows.forEach(function (r) { body.appendChild(buildRow(c, r)); });
+    var add = el("button", "add", "+ ردیف"); add.type = "button";
+    add.addEventListener("click", function () {
+      touch(); var r = newRow(); c.rows.push(r); save(); renderCards(); renderResults();
+      var f = $("lb-" + r.id); if (f) f.focus();
+    });
+    body.appendChild(add);
+    box.appendChild(body);
+
+    var foot = el("div", "xfoot"); foot.id = "foot-" + c.id;
+    box.appendChild(foot);
+    return box;
+  }
+
+  function renderCards() {
+    var box = $("cards"); box.textContent = "";
+    state.cards.forEach(function (c) { box.appendChild(buildCard(c)); });
+    if (!state.cards.length) box.appendChild(el("div", "empty", "هنوز خرجی ثبت نشده."));
+  }
+
+  /* ---------- results ---------- */
+  function renderResults() {
+    var R = compute(), F = state.fams;
+    $("sample").hidden = !state.sample;
+    $("sFam").textContent = fmt(F.length);
+    $("sPeople").textContent = fmt(sum(F.map(function (f) { return Math.max(1, f.size || 1); })));
+    $("sTotal").textContent = fmt(R.grand);
+
+    state.cards.forEach(function (c) {
+      var info = R.cards[c.id];
+      c.rows.forEach(function (r) {
+        var m = $("rt-" + r.id); if (!m) return;
+        var res = info.rows[r.id], txt = "", warn = false;
+        if (res.msg) { txt = res.msg; warn = true; }
+        else if (r.mode === "each" && res.ok) txt = "جمع این ردیف: " + fmt(res.total) + " تومان";
+        m.textContent = txt; m.className = "rmeta" + (warn ? " warn" : "");
+      });
+      var foot = $("foot-" + c.id); if (!foot) return;
+      foot.textContent = "";
+      var sumEl = el("div", "sum");
+      if (info.pi < 0) { sumEl.className = "sum warn"; sumEl.textContent = "مشخص کن چه کسی پول این خرج را داده."; foot.appendChild(sumEl); return; }
+      if (info.total <= 0) { sumEl.textContent = "هنوز مبلغی وارد نشده."; foot.appendChild(sumEl); return; }
+      sumEl.appendChild(document.createTextNode("جمع "));
+      sumEl.appendChild(el("b", null, fmt(info.total) + " تومان"));
+      sumEl.appendChild(document.createTextNode("، پرداخت‌کننده: " + nm(F[info.pi], info.pi) + ". سهم هر خانواده:"));
+      foot.appendChild(sumEl);
+      var chips = el("div", "chips");
+      F.forEach(function (f, i) {
+        if (info.owed[i] <= 0) return;
+        var ch = el("span", "chip"); ch.appendChild(document.createTextNode(nm(f, i) + " "));
+        ch.appendChild(el("em", null, fmt(info.owed[i]))); chips.appendChild(ch);
+      });
+      foot.appendChild(chips);
+    });
+
+    var bals = $("bals"); bals.textContent = "";
+    F.forEach(function (f, i) {
+      var b = R.bal[i];
+      var ch = el("span", "chip" + (b < 0 ? " neg" : b === 0 ? " zero" : ""));
+      ch.appendChild(document.createTextNode(nm(f, i) + (b > 0 ? " طلبکار " : b < 0 ? " بدهکار " : " صاف ")));
+      if (b !== 0) ch.appendChild(el("em", null, fmt(Math.abs(b))));
+      bals.appendChild(ch);
+    });
+
+    var list = $("list"); list.textContent = "";
+    var doneCount = 0;
+    R.tx.forEach(function (t) {
+      var from = F[t.from], to = F[t.to];
+      var key = from.id + ">" + to.id + ":" + t.amt;
+      var when = state.done[key];
+      if (when) doneCount++;
+      var item = el("div", "item" + (when ? " done" : ""));
+      var tick = el("button", "tick", "✓"); tick.type = "button";
+      tick.setAttribute("role", "checkbox"); tick.setAttribute("aria-checked", when ? "true" : "false");
+      tick.setAttribute("aria-label", "تسویه شد");
+      tick.addEventListener("click", function () {
+        if (state.done[key]) delete state.done[key]; else state.done[key] = new Date().toISOString();
+        save(); renderResults();
+      });
+      var who = el("div", "who");
+      var l1 = el("div", "line1");
+      l1.appendChild(el("b", null, nm(from, t.from))); l1.appendChild(document.createTextNode(" باید مبلغ ")); l1.appendChild(el("b", "amt-in", fmt(t.amt))); l1.appendChild(document.createTextNode(" تومان به "));
+      l1.appendChild(el("b", null, nm(to, t.to))); l1.appendChild(document.createTextNode(" پرداخت کند"));
+      who.appendChild(l1);
+      who.appendChild(el("div", "date", when ? "تسویه شد · " + fmtDate(when) : ""));
+      item.appendChild(tick); item.appendChild(who);
+      list.appendChild(item);
+    });
+    var total = R.tx.length;
+    if (!total) list.appendChild(el("div", "empty", R.grand === 0 ? "مبلغ‌ها را وارد کن تا بدهی‌ها حساب شود." : "کسی بدهکار نیست."));
+    $("prog").textContent = total ? fmt(doneCount) + " از " + fmt(total) + " تسویه شد" : "";
+    $("bar").style.width = total ? (doneCount / total * 100) + "%" : "0";
+    $("allgood").hidden = !(total && doneCount === total);
+  }
+
+  /* ---------- top-level buttons ---------- */
+  $("addFam").addEventListener("click", function () {
+    touch();
+    var f = { id: newId(), name: "", size: 1 };
+    state.fams.push(f);
+    state.cards.forEach(function (c) { if (!c.payer) c.payer = f.id; });
+    save(); renderFams(); renderCards(); renderResults();
+    var i = $("nm-" + f.id); if (i) i.focus();
+  });
+  $("addCard").addEventListener("click", function () {
+    touch();
+    var c = newCard(state.fams.length ? state.fams[0].id : "");
+    state.cards.push(c); save(); renderCards(); renderResults();
+    var i = $("t-" + c.id); if (i) i.focus();
+  });
+
+  var reset = $("reset"), armTimer = null;
+  reset.addEventListener("click", function () {
+    if (!reset.classList.contains("arm")) {
+      reset.classList.add("arm"); reset.textContent = "مطمئنی؟ دوباره بزن تا همه‌چیز پاک شود";
+      armTimer = setTimeout(function () { reset.classList.remove("arm"); reset.textContent = "حساب جدید"; }, 4000);
+      return;
+    }
+    clearTimeout(armTimer); reset.classList.remove("arm"); reset.textContent = "حساب جدید";
+    state = blankState(); save(); renderFams(); renderCards(); renderResults();
+  });
+
+  renderFams();
+  renderCards();
+  renderResults();
+})();
+</script>
